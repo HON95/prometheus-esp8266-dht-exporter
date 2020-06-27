@@ -5,113 +5,163 @@
 
 #include "config.h"
 
+enum LogLevel {
+    DEBUG,
+    INFO,
+    ERROR,
+};
+
+void setup_dht_sensor();
+void setup_wifi();
+void setup_http_server();
+void handle_http_home_client();
+void handle_http_metrics_client();
+void read_sensors(boolean force=false);
+bool read_sensor(float (*function)(), float *value);
+void log(char const *message, LogLevel level=LogLevel::INFO);
+
 DHT dht_sensor(DHT_PIN, DHT_TYPE);
-ESP8266WebServer web_server(80);
+ESP8266WebServer http_server(HTTP_SERVER_PORT);
 
 float humidity, temperature;
 char str_humidity[10], str_temperature[10];
 unsigned long previousReadTime = 0;
 
-void setup_wifi();
-void setup_dht();
-void setup_web();
-void read_sensors(boolean force=false);
-void read_sensor(const char *name, float (*function)(), const char *str_format, char *str_result, size_t len_result, float &result);
-void log(const char *message, boolean error=false);
-
 void setup(void) {
-  Serial.begin(9600);
-  log("Starting setup ...");
-  setup_wifi();
-  setup_dht();
-  setup_web();
-  log("Started setup");
+    Serial.begin(9600);
+    setup_dht_sensor();
+    setup_wifi();
+    setup_http_server();
+}
+
+void setup_dht_sensor() {
+    log("Setting up DHT sensor ...");
+    dht_sensor.begin();
+    // Test read
+    read_sensors(true);
+    log("DHT sensor ready.");
 }
 
 void setup_wifi() {
-  char message[100];
-  snprintf(message, 100, "SSID: %s", WIFI_SSID);
-  log(message);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  log("WiFi connecting ...");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-  }
-  const IPAddress &ipaddr = WiFi.localIP();
-  snprintf(message, 100, "IP address: %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
-  log(message);
-  log("Started WiFi");
+    char message[100];
+    snprintf(message, 100, "Using Wi-Fi SSID \"%s\".", WIFI_SSID);
+    log(message);
+    log("Wi-Fi connecting ...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    while (WiFi.status() != WL_CONNECTED) {
+      log("Wi-Fi waiting ...", LogLevel::DEBUG);
+      delay(500);
+    }
+    const IPAddress &ipaddr = WiFi.localIP();
+    log("Wi-Fi connected.");
+    snprintf(message, 100, "IPv4 address: %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+    log(message);
 }
 
-void setup_dht() {
-  dht_sensor.begin();
-  // Initial read
-  read_sensors(true);
-  log("Started DHT sensor");
-}
-
-void setup_web() {
-  web_server.on("/", [] {
-    read_sensors();
-    char response[100];
-    snprintf(response, 100, "Temperature: %s\nHumidity: %s", str_temperature, str_humidity);
-    web_server.send(200, "text/plain", response);
-  });
-  web_server.begin();
-  log("Started web server");
+void setup_http_server() {
+    http_server.on("/", HTTPMethod::HTTP_GET, handle_http_home_client);
+    http_server.on(HTTP_METRICS_ENDPOINT, HTTPMethod::HTTP_GET, handle_http_metrics_client);
+    http_server.begin();
+    log("HTTP server started.");
 }
 
 void loop(void) {
-  web_server.handleClient();
+    http_server.handleClient();
+}
+
+void handle_http_home_client() {
+    static char const *response =
+        "Prometheus ESP8266 DHT Exporter by HON95.\n"
+        "\n"
+        "Project: https://github.com/HON95/prometheus-esp8266-dht-exporter\n"
+        "\n"
+        "Usage: " HTTP_METRICS_ENDPOINT "\n";
+    http_server.send(200, "text/plain", response);
+}
+
+void handle_http_metrics_client() {
+    read_sensors();
+    char response[100];
+    snprintf(response, 100, "Temperature: %s\nHumidity: %s", str_temperature, str_humidity);
+    http_server.send(200, "text/plain", response);
 }
 
 void read_sensors(boolean force) {
-  unsigned long currentTime = millis();
-  if (!force && currentTime - previousReadTime < READ_INTERVAL) {
-    // Use cached values
-    return;
-  }
-  previousReadTime = currentTime;
-
-  // Read temperature as degrees Celsius and force read
-  read_sensor("temperature", []() {
-    return dht_sensor.readTemperature(false, true) + TEMPERATURE_CORRECTION_OFFSET;
-  }, "%.0f\u00B0C", str_temperature, 10, temperature);
-
-  // Read humidity and force read
-  read_sensor("humidity", []() {
-    return dht_sensor.readHumidity(true) + HUMIDITY_CORRECTION_OFFSET;
-  }, "%.0f%%", str_humidity, 10, humidity);
+    // TODO remove caching, the library already does it
+    unsigned long currentTime = millis();
+    if (!force && currentTime - previousReadTime < READ_INTERVAL) {
+        log("Sensors were recently read, will not read again yet.", LogLevel::DEBUG);
+        return;
+    }
+    previousReadTime = currentTime;
+  
+    read_humidity_sensor();
+    read_temperature_sensor();
+    // TODO float hic = dht.computeHeatIndex(t, h, false);
 }
 
-void read_sensor(const char *name, float (*function)(), const char *str_format, char *str_result, size_t len_result, float &result) {
-  char message[100];
-  result = function();
-  for (int i = 0; isnan(result) && i < READ_RETRY_COUNT; i++) {
-#if DEBUG != 0
-    snprintf(message, 100, "Re-reading failed %s ...", name);
-    log(message, true);
-#endif
-    result = function();
-  }
-  if (!isnan(humidity)) {
-    snprintf(str_result, len_result, str_format, result);
-  } else {
-    strcpy(str_result, "ERROR");
-    snprintf(message, 100, "Failed to read %s!", name);
-    log(message, true);
-  }
+void read_humidity_sensor() {
+    log("Reading humidity sensor ...", LogLevel::DEBUG);
+    bool result = read_sensor([] {
+          return dht_sensor.readHumidity();
+      }, &humidity);
+    if (result) {
+        humidity += HUMIDITY_CORRECTION_OFFSET;
+        snprintf(str_humidity, 10, "%.0f%%", humidity);
+    } else {
+        snprintf(str_humidity, 10, "ERROR");
+        log("Failed to read humidity sensor.", LogLevel::ERROR);
+    }
 }
 
-void log(const char *message, boolean error) {
-  float seconds = millis() / 1000.0;
-  char level[10];
-  if (!error) {
-    strcpy(level, "INFO");
-  } else {
-    strcpy(level, "ERROR");
-  }
-  char record[150];
-  snprintf(record, 150, "[%10.3f] [%-5s] %s", seconds, level, message);
-  Serial.println(record);
+void read_temperature_sensor() {
+    log("Reading temperature sensor ...", LogLevel::DEBUG);
+    bool result = read_sensor([] {
+        return dht_sensor.readTemperature(false);
+    }, &temperature);
+    if (result) {
+        temperature += TEMPERATURE_CORRECTION_OFFSET;
+        snprintf(str_temperature, 10, "%.0f\u00B0C", temperature);
+    } else {
+        snprintf(str_temperature, 10, "ERROR");
+        log("Failed to read temperature sensor.", LogLevel::ERROR);
+    }
+}
+
+bool read_sensor(float (*function)(), float *value) {
+    bool success = false;
+    for (int i = 0; i < READ_TRY_COUNT; i++) {
+        *value = function();
+        if (!isnan(*value)) {
+            success = true;
+            break;
+        }
+        log("Failed to read sensor.", LogLevel::DEBUG);
+    }
+    return success;
+}
+
+void log(char const *message, LogLevel level) {
+    if (DEBUG_MODE == 0 && level == LogLevel::DEBUG) {
+        return;
+    }
+    // Will overflow after a while
+    float seconds = millis() / 1000.0;
+    char str_level[10];
+    switch (level) {
+        case DEBUG:
+            strcpy(str_level, "DEBUG");
+            break;
+        case INFO:
+            strcpy(str_level, "INFO");
+            break;
+        case ERROR:
+            strcpy(str_level, "ERROR");
+            break;
+        default:
+            break;
+    }
+    char record[150];
+    snprintf(record, 150, "[%10.3f] [%-5s] %s", seconds, str_level, message);
+    Serial.println(record);
 }
