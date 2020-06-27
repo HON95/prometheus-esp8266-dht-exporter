@@ -23,8 +23,7 @@ void log(char const *message, LogLevel level=LogLevel::INFO);
 DHTesp dht_sensor;
 ESP8266WebServer http_server(HTTP_SERVER_PORT);
 
-float humidity, temperature;
-char str_humidity[10], str_temperature[10];
+float humidity, temperature, heat_index;
 uint32_t previous_read_time = 0;
 
 void setup(void) {
@@ -71,19 +70,42 @@ void loop(void) {
 }
 
 void handle_http_home_client() {
-    static char const *response =
+    static size_t const BUFSIZE = 256;
+    static char const *response_template =
         "Prometheus ESP8266 DHT Exporter by HON95.\n"
         "\n"
         "Project: https://github.com/HON95/prometheus-esp8266-dht-exporter\n"
         "\n"
-        "Usage: " HTTP_METRICS_ENDPOINT "\n";
+        "Usage: %s\n";
+    char response[BUFSIZE];
+    snprintf(response, BUFSIZE, response_template, HTTP_METRICS_ENDPOINT);
     http_server.send(200, "text/plain; charset=utf-8", response);
 }
 
 void handle_http_metrics_client() {
+    static size_t const BUFSIZE = 1024;
+    static char const *response_template =
+        "# HELP iot_humidity_percent Air humidity.\n"
+        "# TYPE iot_humidity_percent gauge\n"
+        "# UNIT iot_humidity_percent %%\n"
+        "iot_humidity_percent %f\n"
+        "# HELP iot_temperature_celsius Air temperature.\n"
+        "# TYPE iot_temperature_celsius gauge\n"
+        "# UNIT iot_temperature_celsius \u00B0C\n"
+        "iot_temperature_celsius %f\n"
+        "# HELP iot_heat_index_celsius Apparent air temperature, based on temperature and humidity.\n"
+        "# TYPE iot_heat_index_celsius gauge\n"
+        "# UNIT iot_heat_index_celsius \u00B0C\n"
+        "iot_heat_index_celsius %f\n";
+
     read_sensors();
-    char response[100];
-    snprintf(response, 100, "Temperature: %s\nHumidity: %s", str_temperature, str_humidity);
+    if (isnan(humidity) || isnan(temperature) || isnan(heat_index)) {
+        http_server.send(500, "text/plain; charset=utf-8", "Sensor error.");
+        return;
+    }
+
+    char response[BUFSIZE];
+    snprintf(response, BUFSIZE, response_template, humidity, temperature, heat_index);
     http_server.send(200, "text/plain; charset=utf-8", response);
 }
 
@@ -95,10 +117,10 @@ void read_sensors(boolean force) {
         return;
     }
     previous_read_time = current_time;
-  
+
     read_humidity_sensor();
     read_temperature_sensor();
-    // TODO float hic = dht.computeHeatIndex(temperature, humidity, false);
+    read_heat_index();
 }
 
 void read_humidity_sensor() {
@@ -108,9 +130,7 @@ void read_humidity_sensor() {
       }, &humidity);
     if (result) {
         humidity += HUMIDITY_CORRECTION_OFFSET;
-        snprintf(str_humidity, 10, "%.0f%%", humidity);
     } else {
-        snprintf(str_humidity, 10, "ERROR");
         log("Failed to read humidity sensor.", LogLevel::ERROR);
     }
 }
@@ -122,10 +142,16 @@ void read_temperature_sensor() {
     }, &temperature);
     if (result) {
         temperature += TEMPERATURE_CORRECTION_OFFSET;
-        snprintf(str_temperature, 10, "%.0f\u00B0C", temperature);
     } else {
-        snprintf(str_temperature, 10, "ERROR");
         log("Failed to read temperature sensor.", LogLevel::ERROR);
+    }
+}
+
+void read_heat_index() {
+    if (!isnan(humidity) && !isnan(temperature)) {
+        heat_index = dht_sensor.computeHeatIndex(temperature, humidity, false);
+    } else {
+        heat_index = NAN;
     }
 }
 

@@ -26,3 +26,11 @@ This uses the Arduino IDE.
 1. Set the correct settings for the board.
     - WEMOS D1 Mini uses board "WeMoS D1 R2 & mini".
 1. Build and upload using the Arduino IDE.
+
+## Metrics
+
+| Metric | Description | Unit |
+| - | - | - |
+| iot_humidity_percent | Air humidity. | `%` |
+| iot_temperature_celsius | Air temperature. | `°C` |
+| iot_heat_index_celsius | Apparent air temperature, based on temperature and humidity. | `°C` |
