@@ -1,7 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <WiFiClient.h>
-#include <DHT.h>
+#include <DHTesp.h>
 
 #include "config.h"
 
@@ -20,12 +20,12 @@ void read_sensors(boolean force=false);
 bool read_sensor(float (*function)(), float *value);
 void log(char const *message, LogLevel level=LogLevel::INFO);
 
-DHT dht_sensor(DHT_PIN, DHT_TYPE);
+DHTesp dht_sensor;
 ESP8266WebServer http_server(HTTP_SERVER_PORT);
 
 float humidity, temperature;
 char str_humidity[10], str_temperature[10];
-unsigned long previousReadTime = 0;
+uint32_t previous_read_time = 0;
 
 void setup(void) {
     Serial.begin(9600);
@@ -36,7 +36,8 @@ void setup(void) {
 
 void setup_dht_sensor() {
     log("Setting up DHT sensor ...");
-    dht_sensor.begin();
+    dht_sensor.setup(DHT_PIN, DHTesp::DHT_TYPE);
+    delay(dht_sensor.getMinimumSamplingPeriod());
     // Test read
     read_sensors(true);
     log("DHT sensor ready.");
@@ -76,34 +77,34 @@ void handle_http_home_client() {
         "Project: https://github.com/HON95/prometheus-esp8266-dht-exporter\n"
         "\n"
         "Usage: " HTTP_METRICS_ENDPOINT "\n";
-    http_server.send(200, "text/plain", response);
+    http_server.send(200, "text/plain; charset=utf-8", response);
 }
 
 void handle_http_metrics_client() {
     read_sensors();
     char response[100];
     snprintf(response, 100, "Temperature: %s\nHumidity: %s", str_temperature, str_humidity);
-    http_server.send(200, "text/plain", response);
+    http_server.send(200, "text/plain; charset=utf-8", response);
 }
 
 void read_sensors(boolean force) {
-    // TODO remove caching, the library already does it
-    unsigned long currentTime = millis();
-    if (!force && currentTime - previousReadTime < READ_INTERVAL) {
+    uint32_t min_interval = max(dht_sensor.getMinimumSamplingPeriod(), READ_INTERVAL);
+    uint32_t current_time = millis();
+    if (!force && current_time - previous_read_time < min_interval) {
         log("Sensors were recently read, will not read again yet.", LogLevel::DEBUG);
         return;
     }
-    previousReadTime = currentTime;
+    previous_read_time = current_time;
   
     read_humidity_sensor();
     read_temperature_sensor();
-    // TODO float hic = dht.computeHeatIndex(t, h, false);
+    // TODO float hic = dht.computeHeatIndex(temperature, humidity, false);
 }
 
 void read_humidity_sensor() {
     log("Reading humidity sensor ...", LogLevel::DEBUG);
     bool result = read_sensor([] {
-          return dht_sensor.readHumidity();
+          return dht_sensor.getHumidity();
       }, &humidity);
     if (result) {
         humidity += HUMIDITY_CORRECTION_OFFSET;
@@ -117,7 +118,7 @@ void read_humidity_sensor() {
 void read_temperature_sensor() {
     log("Reading temperature sensor ...", LogLevel::DEBUG);
     bool result = read_sensor([] {
-        return dht_sensor.readTemperature(false);
+        return dht_sensor.getTemperature();
     }, &temperature);
     if (result) {
         temperature += TEMPERATURE_CORRECTION_OFFSET;

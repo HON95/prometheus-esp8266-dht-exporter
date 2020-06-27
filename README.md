@@ -14,8 +14,9 @@ DHT sensor: [Wemos DHT Shield](https://wiki.wemos.cc/products:retired:dht_shield
     - Download and install.
 - [esp8266 library for Arduino](https://github.com/esp8266/Arduino#installing-with-boards-manager)
     - See the instructions on the page.
-- [Adafruit DHT sensor library](https://github.com/adafruit/DHT-sensor-library)
-    - Install using the library manager, including all dependencies.
+- [DHT sensor library for ESPx](https://github.com/beegee-tokyo/DHTesp)
+    - Install using the Arduino library manager.
+    - The Adafruit one didn't work for the WEMOS D1.
 
 ## Building
 
