@@ -1,4 +1,4 @@
-# prometheus-esp8266-dht-exporter
+# Prometheus ESP8266 DHT Exporter
 
 A Prometheus exporter for IoT temperature and humidity measurements, using an ESP8266 (Arduino-compatible) with a Wi-Fi module and a DHT (temperature + humidity) sensor.
 
