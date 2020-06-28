@@ -43,8 +43,8 @@ void setup_dht_sensor() {
 }
 
 void setup_wifi() {
-    char message[100];
-    snprintf(message, 100, "Using Wi-Fi SSID \"%s\".", WIFI_SSID);
+    char message[128];
+    snprintf(message, 128, "Wi-Fi SSID: %s", WIFI_SSID);
     log(message);
     log("Wi-Fi connecting ...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -54,7 +54,7 @@ void setup_wifi() {
     }
     const IPAddress &ipaddr = WiFi.localIP();
     log("Wi-Fi connected.");
-    snprintf(message, 100, "IPv4 address: %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+    snprintf(message, 128, "IPv4 address: %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
     log(message);
 }
 
@@ -63,6 +63,9 @@ void setup_http_server() {
     http_server.on(HTTP_METRICS_ENDPOINT, HTTPMethod::HTTP_GET, handle_http_metrics_client);
     http_server.begin();
     log("HTTP server started.");
+    char message[128];
+    snprintf(message, 128, "Metrics endpoint: %s", HTTP_METRICS_ENDPOINT);
+    log(message);
 }
 
 void loop(void) {
@@ -85,18 +88,18 @@ void handle_http_home_client() {
 void handle_http_metrics_client() {
     static size_t const BUFSIZE = 1024;
     static char const *response_template =
-        "# HELP iot_humidity_percent Air humidity.\n"
-        "# TYPE iot_humidity_percent gauge\n"
-        "# UNIT iot_humidity_percent %%\n"
-        "iot_humidity_percent %f\n"
-        "# HELP iot_temperature_celsius Air temperature.\n"
-        "# TYPE iot_temperature_celsius gauge\n"
-        "# UNIT iot_temperature_celsius \u00B0C\n"
-        "iot_temperature_celsius %f\n"
-        "# HELP iot_heat_index_celsius Apparent air temperature, based on temperature and humidity.\n"
-        "# TYPE iot_heat_index_celsius gauge\n"
-        "# UNIT iot_heat_index_celsius \u00B0C\n"
-        "iot_heat_index_celsius %f\n";
+        "# HELP iot_air_humidity_percent Air humidity.\n"
+        "# TYPE iot_air_humidity_percent gauge\n"
+        "# UNIT iot_air_humidity_percent %%\n"
+        "iot_air_humidity_percent %f\n"
+        "# HELP iot_air_temperature_celsius Air temperature.\n"
+        "# TYPE iot_air_temperature_celsius gauge\n"
+        "# UNIT iot_air_temperature_celsius \u00B0C\n"
+        "iot_air_temperature_celsius %f\n"
+        "# HELP iot_air_heat_index_celsius Apparent air temperature, based on temperature and humidity.\n"
+        "# TYPE iot_air_heat_index_celsius gauge\n"
+        "# UNIT iot_air_heat_index_celsius \u00B0C\n"
+        "iot_air_heat_index_celsius %f\n";
 
     read_sensors();
     if (isnan(humidity) || isnan(temperature) || isnan(heat_index)) {

@@ -31,6 +31,6 @@ This uses the Arduino IDE.
 
 | Metric | Description | Unit |
 | - | - | - |
-| iot_humidity_percent | Air humidity. | `%` |
-| iot_temperature_celsius | Air temperature. | `°C` |
-| iot_heat_index_celsius | Apparent air temperature, based on temperature and humidity. | `°C` |
+| iot_air_humidity_percent | Air humidity. | `%` |
+| iot_air_temperature_celsius | Air temperature. | `°C` |
+| iot_air_heat_index_celsius | Apparent air temperature, based on temperature and humidity. | `°C` |
