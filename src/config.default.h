@@ -2,6 +2,10 @@
 
 // Debug mode is enabled if not zero
 #define DEBUG_MODE 0
+// Board name
+#define BOARD_NAME "ESP8266"
+// DHT sensor name (should be the same)
+#define DHT_NAME "DHT11"
 // DHT sensor type
 #define DHT_TYPE DHT11
 // DHT pin

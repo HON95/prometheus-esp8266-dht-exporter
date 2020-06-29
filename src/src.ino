@@ -4,6 +4,7 @@
 #include <DHTesp.h>
 
 #include "config.h"
+#include "version.h"
 
 enum LogLevel {
     DEBUG,
@@ -88,6 +89,10 @@ void handle_http_home_client() {
 void handle_http_metrics_client() {
     static size_t const BUFSIZE = 1024;
     static char const *response_template =
+        "# HELP iot_info Metadata about the device.\n"
+        "# TYPE iot_info gauge\n"
+        "# UNIT iot_info \n"
+        "iot_info{version=\"%s\",board=\"%s\",sensor=\"%s\"} 1\n"
         "# HELP iot_air_humidity_percent Air humidity.\n"
         "# TYPE iot_air_humidity_percent gauge\n"
         "# UNIT iot_air_humidity_percent %%\n"
@@ -108,7 +113,7 @@ void handle_http_metrics_client() {
     }
 
     char response[BUFSIZE];
-    snprintf(response, BUFSIZE, response_template, humidity, temperature, heat_index);
+    snprintf(response, BUFSIZE, response_template, VERSION, BOARD_NAME, DHT_NAME, humidity, temperature, heat_index);
     http_server.send(200, "text/plain; charset=utf-8", response);
 }
 
