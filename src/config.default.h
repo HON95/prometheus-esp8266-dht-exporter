@@ -9,7 +9,7 @@
 // DHT sensor type
 #define DHT_TYPE DHT11
 // DHT pin
-#define DHT_PIN 2
+#define DHT_PIN 14
 // HTTP server port
 #define HTTP_SERVER_PORT 80
 // HTTP metrics endpoint

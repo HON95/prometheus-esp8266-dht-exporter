@@ -13,13 +13,18 @@ A Prometheus exporter for IoT temperature and humidity measurements, using an ES
 | iot_air_temperature_celsius | Air temperature. | `°C` |
 | iot_air_heat_index_celsius | Apparent air temperature, based on temperature and humidity. | `°C` |
 
-## Hardware
+## Requirements
 
-ESP8266-based board: [WEMOS D1 Mini](https://wiki.wemos.cc/products:d1:d1_mini)
+### Hardware
 
-DHT sensor: [Wemos DHT Shield](https://wiki.wemos.cc/products:retired:dht_shield_v1.0.0) (DHT11)
+- ESP8266-based board (or some other appropriate Arduino-based board).
+    - Tested with "Adafruit Feather HUZZAH ESP8266" and "WEMOS D1 Mini".
+- DHT sensor.
+    - Tested with a cheap DHT11 eBay and "Wemos DHT Shield".
+    - DHT11 supports a maximum of 1Hz polling while DHT22 supports a maximum of 2Hz polling.
+    - Both DHT11 and DHT22 support both 3V and 5V at 2.5mA max current.
 
-## Software
+### Software
 
 - [Arduino IDE](https://www.arduino.cc/en/Main/Software)
     - Download and install.
@@ -27,15 +32,25 @@ DHT sensor: [Wemos DHT Shield](https://wiki.wemos.cc/products:retired:dht_shield
     - See the instructions on the page.
 - [DHT sensor library for ESPx](https://github.com/beegee-tokyo/DHTesp)
     - Install using the Arduino library manager.
-    - The Adafruit one didn't work for the WEMOS D1.
+    - You can also try the Adafruit one, but that one didn't work for me.
 
 ## Building
 
-This uses the Arduino IDE.
+### Hardware
+
+Using the "Adafruit Feather HUZZAH ESP8266".
+
+Wire the DHT sensor power to the 3.3V and any GND on the ESP and wire the data output to e.g. pin 14 (aka D5).
+
+### Software
+
+Using the Arduino IDE.
 
 1. Copy `config.default.h` to `config.h` and fill inn the details.
+1. Open `src/src.ino` in the Arduino IDE.
 1. Set the correct settings for the board.
     - WEMOS D1 Mini uses board "WeMoS D1 R2 & mini".
+    - Adafruit Feather HUZZAH ESP8266 uses "Adafruit Feather HUZZAH ESP8266".
 1. Build and upload using the Arduino IDE.
 
 ## Version
