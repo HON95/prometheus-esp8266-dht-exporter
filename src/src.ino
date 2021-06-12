@@ -47,15 +47,37 @@ void setup_wifi() {
     char message[128];
     snprintf(message, 128, "Wi-Fi SSID: %s", WIFI_SSID);
     log(message);
+
+    if (WIFI_IPV4_STATIC) {
+        IPAddress address(WIFI_IPV4_ADDRESS);
+        IPAddress subnet(WIFI_IPV4_SUBNET_MASK);
+        IPAddress gateway(WIFI_IPV4_GATEWAY);
+        IPAddress dns1(WIFI_IPV4_DNS_1);
+        IPAddress dns2(WIFI_IPV4_DNS_2);
+        snprintf(message, 128, "Static IPv4 address: %d.%d.%d.%d", address[0], address[1], address[2], address[3]);
+        log(message);
+        snprintf(message, 128, "Static IPv4 subnet mask: %d.%d.%d.%d", subnet[0], subnet[1], subnet[2], subnet[3]);
+        log(message);
+        snprintf(message, 128, "Static IPv4 gateway: %d.%d.%d.%d", gateway[0], gateway[1], gateway[2], gateway[3]);
+        log(message);
+        snprintf(message, 128, "Static IPv4 primary DNS server: %d.%d.%d.%d", dns1[0], dns1[1], dns1[2], dns1[3]);
+        log(message);
+        snprintf(message, 128, "Static IPv4 secondary DNS server: %d.%d.%d.%d", dns2[0], dns2[1], dns2[2], dns2[3]);
+        log(message);
+        if (!WiFi.config(address, gateway, subnet, dns1, dns2)) {
+            log("Failed to configure Wi-Fi.", LogLevel::ERROR);
+        }
+    }
+
     log("Wi-Fi connecting ...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     while (WiFi.status() != WL_CONNECTED) {
-      log("Wi-Fi waiting ...", LogLevel::DEBUG);
-      delay(500);
+        log("Wi-Fi waiting ...", LogLevel::DEBUG);
+        delay(500);
     }
-    const IPAddress &ipaddr = WiFi.localIP();
+    const IPAddress &address = WiFi.localIP();
     log("Wi-Fi connected.");
-    snprintf(message, 128, "IPv4 address: %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+    snprintf(message, 128, "IPv4 address: %d.%d.%d.%d", address[0], address[1], address[2], address[3]);
     log(message);
 }
 
