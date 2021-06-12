@@ -2,7 +2,7 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/HON95/prometheus-esp8266-dht-exporter?label=Version)](https://github.com/HON95/prometheus-esp8266-dht-exporter/releases)
 
-A Prometheus exporter for IoT temperature and humidity measurements, using an ESP8266 (Arduino-compatible) with a Wi-Fi module and a DHT (temperature + humidity) sensor.
+An IoT Prometheus exporter for measuring temperature and humidity, using an ESP8266 (Arduino-compatible) with a Wi-Fi module and a DHT (temperature + humidity) sensor.
 
 ## Metrics
 
@@ -20,7 +20,7 @@ A Prometheus exporter for IoT temperature and humidity measurements, using an ES
 - ESP8266-based board (or some other appropriate Arduino-based board).
     - Tested with "Adafruit Feather HUZZAH ESP8266" and "WEMOS D1 Mini".
 - DHT sensor.
-    - Tested with a cheap DHT11 eBay and "Wemos DHT Shield".
+    - Tested with a cheap DHT11 from eBay and "Wemos DHT Shield".
     - DHT11 supports a maximum of 1Hz polling while DHT22 supports a maximum of 2Hz polling.
     - Both DHT11 and DHT22 support both 3V and 5V at 2.5mA max current.
 
