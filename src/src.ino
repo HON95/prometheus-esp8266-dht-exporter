@@ -44,6 +44,7 @@ void setup_dht_sensor() {
 }
 
 void setup_wifi() {
+    WiFi.mode(WIFI_STA);
     char message[128];
     snprintf(message, 128, "Wi-Fi SSID: %s", WIFI_SSID);
     log(message);
@@ -70,6 +71,18 @@ void setup_wifi() {
     }
 
     log("Wi-Fi connecting ...");
+    #ifdef WIFI_HOSTNAME
+      snprintf(message, 128, "Initial hostname: %s", WiFi.hostname().c_str());
+      log(message);
+      log("Requesting hostname " WIFI_HOSTNAME);
+      if (!WiFi.hostname(WIFI_HOSTNAME)) {
+        log("Hostname request failed");
+      } else {
+        log("Hostname request succeeded");
+      }
+      snprintf(message, 128, "New hostname: %s", WiFi.hostname().c_str());
+      log(message);
+    #endif
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     while (WiFi.status() != WL_CONNECTED) {
         log("Wi-Fi waiting ...", LogLevel::DEBUG);

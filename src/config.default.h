@@ -22,6 +22,8 @@
 #define WIFI_SSID ""
 // Wi-Fi password (required)
 #define WIFI_PASSWORD ""
+// Wi-Fi hostname (for DHCP, uncomment if non-default desired)
+// #define WIFI_HOSTNAME "my_host_name"
 // Wi-Fi static IPv4 address enabled or disabled (disable for DHCPv4)
 #define WIFI_IPV4_STATIC false
 // Wi-Fi static IPv4 address
