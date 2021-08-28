@@ -34,7 +34,7 @@ void setup(void) {
     setup_dht_sensor();
     setup_wifi();
     setup_http_server();
-    snprintf(message, 128, "Namespace: %s", PROM_NAMESPACE);
+    snprintf(message, 128, "Prometheus namespace: %s", PROM_NAMESPACE);
     log(message);
     log("Setup done");
 }
@@ -45,18 +45,18 @@ void setup_dht_sensor() {
     delay(dht_sensor.getMinimumSamplingPeriod());
     // Test read
     read_sensors(true);
-    log("DHT sensor ready");
+    log("DHT sensor ready", LogLevel::DEBUG);
 }
 
 void setup_wifi() {
     char message[128];
     log("Setting up Wi-Fi");
     snprintf(message, 128, "Wi-Fi SSID: %s", WIFI_SSID);
-    log(message);
+    log(message, LogLevel::DEBUG);
     snprintf(message, 128, "MAC address: %s", WiFi.macAddress().c_str());
-    log(message);
+    log(message, LogLevel::DEBUG);
     snprintf(message, 128, "Initial hostname: %s", WiFi.hostname().c_str());
-    log(message);
+    log(message, LogLevel::DEBUG);
 
     WiFi.mode(WIFI_STA);
 
@@ -74,10 +74,10 @@ void setup_wifi() {
 
     #ifdef WIFI_HOSTNAME
         log("Requesting hostname: " WIFI_HOSTNAME);
-        if (!WiFi.hostname(WIFI_HOSTNAME)) {
+        if (WiFi.hostname(WIFI_HOSTNAME)) {
             log("Hostname changed");
         } else {
-            log("Failed to change hostname (too long?)");
+            log("Failed to change hostname (too long?)", LogLevel::ERROR);
         }
     #endif
 
@@ -94,6 +94,8 @@ void setup_wifi() {
     log(message);
     snprintf(message, 128, "Hostname: %s", WiFi.hostname().c_str());
     log(message);
+    snprintf(message, 128, "MAC address: %s", WiFi.macAddress().c_str());
+    log(message);
     snprintf(message, 128, "IPv4 address: %s", WiFi.localIP().toString().c_str());
     log(message);
     snprintf(message, 128, "IPv4 subnet mask: %s", WiFi.subnetMask().toString().c_str());
@@ -105,14 +107,14 @@ void setup_wifi() {
     snprintf(message, 128, "Secondary DNS server: %s", WiFi.dnsIP(1).toString().c_str());
     log(message);
 }
-
 void setup_http_server() {
     char message[128];
+    log("Setting up HTTP server");
     http_server.on("/", HTTPMethod::HTTP_GET, handle_http_root);
     http_server.on(HTTP_METRICS_ENDPOINT, HTTPMethod::HTTP_GET, handle_http_metrics);
     http_server.onNotFound(handle_http_not_found);
     http_server.begin();
-    log("HTTP server started.");
+    log("HTTP server started", LogLevel::DEBUG);
     snprintf(message, 128, "Metrics endpoint: %s", HTTP_METRICS_ENDPOINT);
     log(message);
 }
@@ -242,13 +244,30 @@ void log_request() {
 
 void get_http_method_name(char *name, size_t name_length, HTTPMethod method) {
     switch (method) {
-    case HTTP_ANY:
-        snprintf(name, name_length, "ANY");
+    case HTTP_GET:
+        snprintf(name, name_length, "GET");
+        break;
+    case HTTP_HEAD:
+        snprintf(name, name_length, "HEAD");
+        break;
+    case HTTP_POST:
+        snprintf(name, name_length, "POST");
+        break;
+    case HTTP_PUT:
+        snprintf(name, name_length, "PUT");
+        break;
+    case HTTP_PATCH:
+        snprintf(name, name_length, "PATCH");
+        break;
+    case HTTP_DELETE:
+        snprintf(name, name_length, "DELETE");
+        break;
+    case HTTP_OPTIONS:
+        snprintf(name, name_length, "OPTIONS");
         break;
     default:
         snprintf(name, name_length, "UNKNOWN");
         break;
-    //, HTTP_GET, HTTP_HEAD, HTTP_POST, HTTP_PUT, HTTP_PATCH, HTTP_DELETE, HTTP_OPTIONS }
     }
 }
 
