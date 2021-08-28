@@ -1,10 +1,11 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include <WiFiClient.h>
 #include <DHTesp.h>
 
 #include "config.h"
 #include "version.h"
+
+#define EXPLODE4(arr) (arr[0], arr[1], arr[2], arr[3])
 
 enum LogLevel {
     DEBUG,
@@ -28,78 +29,90 @@ float humidity, temperature, heat_index;
 uint32_t previous_read_time = 0;
 
 void setup(void) {
+    char message[128];
     Serial.begin(9600);
     setup_dht_sensor();
     setup_wifi();
     setup_http_server();
+    snprintf(message, 128, "Namespace: %s", PROM_NAMESPACE);
+    log(message);
+    log("Setup done");
 }
 
 void setup_dht_sensor() {
-    log("Setting up DHT sensor ...");
+    log("Setting up DHT sensor");
     dht_sensor.setup(DHT_PIN, DHTesp::DHT_TYPE);
     delay(dht_sensor.getMinimumSamplingPeriod());
     // Test read
     read_sensors(true);
-    log("DHT sensor ready.");
+    log("DHT sensor ready");
 }
 
 void setup_wifi() {
-    WiFi.mode(WIFI_STA);
     char message[128];
+    log("Setting up Wi-Fi");
     snprintf(message, 128, "Wi-Fi SSID: %s", WIFI_SSID);
     log(message);
+    snprintf(message, 128, "MAC address: %s", WiFi.macAddress().c_str());
+    log(message);
+    snprintf(message, 128, "Initial hostname: %s", WiFi.hostname().c_str());
+    log(message);
 
-    if (WIFI_IPV4_STATIC) {
-        IPAddress address(WIFI_IPV4_ADDRESS);
-        IPAddress subnet(WIFI_IPV4_SUBNET_MASK);
-        IPAddress gateway(WIFI_IPV4_GATEWAY);
-        IPAddress dns1(WIFI_IPV4_DNS_1);
-        IPAddress dns2(WIFI_IPV4_DNS_2);
-        snprintf(message, 128, "Static IPv4 address: %d.%d.%d.%d", address[0], address[1], address[2], address[3]);
-        log(message);
-        snprintf(message, 128, "Static IPv4 subnet mask: %d.%d.%d.%d", subnet[0], subnet[1], subnet[2], subnet[3]);
-        log(message);
-        snprintf(message, 128, "Static IPv4 gateway: %d.%d.%d.%d", gateway[0], gateway[1], gateway[2], gateway[3]);
-        log(message);
-        snprintf(message, 128, "Static IPv4 primary DNS server: %d.%d.%d.%d", dns1[0], dns1[1], dns1[2], dns1[3]);
-        log(message);
-        snprintf(message, 128, "Static IPv4 secondary DNS server: %d.%d.%d.%d", dns2[0], dns2[1], dns2[2], dns2[3]);
-        log(message);
-        if (!WiFi.config(address, gateway, subnet, dns1, dns2)) {
-            log("Failed to configure Wi-Fi.", LogLevel::ERROR);
+    WiFi.mode(WIFI_STA);
+
+    #if WIFI_IPV4_STATIC == true
+        log("Using static IPv4 adressing");
+        IPAddress static_address(WIFI_IPV4_ADDRESS);
+        IPAddress static_subnet(WIFI_IPV4_SUBNET_MASK);
+        IPAddress static_gateway(WIFI_IPV4_GATEWAY);
+        IPAddress static_dns1(WIFI_IPV4_DNS_1);
+        IPAddress static_dns2(WIFI_IPV4_DNS_2);
+        if (!WiFi.config(static_address, static_gateway, static_subnet, static_dns1, static_dns2)) {
+            log("Failed to configure static addressing", LogLevel::ERROR);
         }
-    }
-
-    log("Wi-Fi connecting ...");
-    #ifdef WIFI_HOSTNAME
-      snprintf(message, 128, "Initial hostname: %s", WiFi.hostname().c_str());
-      log(message);
-      log("Requesting hostname " WIFI_HOSTNAME);
-      if (!WiFi.hostname(WIFI_HOSTNAME)) {
-        log("Hostname request failed");
-      } else {
-        log("Hostname request succeeded");
-      }
-      snprintf(message, 128, "New hostname: %s", WiFi.hostname().c_str());
-      log(message);
     #endif
+
+    #ifdef WIFI_HOSTNAME
+        log("Requesting hostname: " WIFI_HOSTNAME);
+        if (!WiFi.hostname(WIFI_HOSTNAME)) {
+            log("Hostname changed");
+        } else {
+            log("Failed to change hostname (too long?)");
+        }
+    #endif
+
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     while (WiFi.status() != WL_CONNECTED) {
-        log("Wi-Fi waiting ...", LogLevel::DEBUG);
+        log("Wi-Fi connection not ready, waiting", LogLevel::DEBUG);
         delay(500);
     }
-    const IPAddress &address = WiFi.localIP();
+
     log("Wi-Fi connected.");
-    snprintf(message, 128, "IPv4 address: %d.%d.%d.%d", address[0], address[1], address[2], address[3]);
+    snprintf(message, 128, "SSID: %s", WiFi.SSID().c_str());
+    log(message);
+    snprintf(message, 128, "BSSID: %s", WiFi.BSSIDstr().c_str());
+    log(message);
+    snprintf(message, 128, "Hostname: %s", WiFi.hostname().c_str());
+    log(message);
+    snprintf(message, 128, "IPv4 address: %s", WiFi.localIP().toString().c_str());
+    log(message);
+    snprintf(message, 128, "IPv4 subnet mask: %s", WiFi.subnetMask().toString().c_str());
+    log(message);
+    snprintf(message, 128, "IPv4 gateway: %s", WiFi.gatewayIP().toString().c_str());
+    log(message);
+    snprintf(message, 128, "Primary DNS server: %s", WiFi.dnsIP(0).toString().c_str());
+    log(message);
+    snprintf(message, 128, "Secondary DNS server: %s", WiFi.dnsIP(1).toString().c_str());
     log(message);
 }
 
 void setup_http_server() {
-    http_server.on("/", HTTPMethod::HTTP_GET, handle_http_home_client);
-    http_server.on(HTTP_METRICS_ENDPOINT, HTTPMethod::HTTP_GET, handle_http_metrics_client);
+    char message[128];
+    http_server.on("/", HTTPMethod::HTTP_GET, handle_http_root);
+    http_server.on(HTTP_METRICS_ENDPOINT, HTTPMethod::HTTP_GET, handle_http_metrics);
+    http_server.onNotFound(handle_http_not_found);
     http_server.begin();
     log("HTTP server started.");
-    char message[128];
     snprintf(message, 128, "Metrics endpoint: %s", HTTP_METRICS_ENDPOINT);
     log(message);
 }
@@ -108,7 +121,8 @@ void loop(void) {
     http_server.handleClient();
 }
 
-void handle_http_home_client() {
+void handle_http_root() {
+    log_request();
     static size_t const BUFSIZE = 256;
     static char const *response_template =
         "Prometheus ESP8266 DHT Exporter by HON95.\n"
@@ -121,25 +135,26 @@ void handle_http_home_client() {
     http_server.send(200, "text/plain; charset=utf-8", response);
 }
 
-void handle_http_metrics_client() {
+void handle_http_metrics() {
+    log_request();
     static size_t const BUFSIZE = 1024;
     static char const *response_template =
-        "# HELP iot_info Metadata about the device.\n"
-        "# TYPE iot_info gauge\n"
-        "# UNIT iot_info \n"
-        "iot_info{version=\"%s\",board=\"%s\",sensor=\"%s\"} 1\n"
-        "# HELP iot_air_humidity_percent Air humidity.\n"
-        "# TYPE iot_air_humidity_percent gauge\n"
-        "# UNIT iot_air_humidity_percent %%\n"
-        "iot_air_humidity_percent %f\n"
-        "# HELP iot_air_temperature_celsius Air temperature.\n"
-        "# TYPE iot_air_temperature_celsius gauge\n"
-        "# UNIT iot_air_temperature_celsius \u00B0C\n"
-        "iot_air_temperature_celsius %f\n"
-        "# HELP iot_air_heat_index_celsius Apparent air temperature, based on temperature and humidity.\n"
-        "# TYPE iot_air_heat_index_celsius gauge\n"
-        "# UNIT iot_air_heat_index_celsius \u00B0C\n"
-        "iot_air_heat_index_celsius %f\n";
+        "# HELP " PROM_NAMESPACE "_info Metadata about the device.\n"
+        "# TYPE " PROM_NAMESPACE "_info gauge\n"
+        "# UNIT " PROM_NAMESPACE "_info \n"
+        PROM_NAMESPACE "_info{version=\"%s\",board=\"%s\",sensor=\"%s\"} 1\n"
+        "# HELP " PROM_NAMESPACE "_air_humidity_percent Air humidity.\n"
+        "# TYPE " PROM_NAMESPACE "_air_humidity_percent gauge\n"
+        "# UNIT " PROM_NAMESPACE "_air_humidity_percent %%\n"
+        PROM_NAMESPACE "_air_humidity_percent %f\n"
+        "# HELP " PROM_NAMESPACE "_air_temperature_celsius Air temperature.\n"
+        "# TYPE " PROM_NAMESPACE "_air_temperature_celsius gauge\n"
+        "# UNIT " PROM_NAMESPACE "_air_temperature_celsius \u00B0C\n"
+        PROM_NAMESPACE "_air_temperature_celsius %f\n"
+        "# HELP " PROM_NAMESPACE "_air_heat_index_celsius Apparent air temperature, based on temperature and humidity.\n"
+        "# TYPE " PROM_NAMESPACE "_air_heat_index_celsius gauge\n"
+        "# UNIT " PROM_NAMESPACE "_air_heat_index_celsius \u00B0C\n"
+        PROM_NAMESPACE "_air_heat_index_celsius %f\n";
 
     read_sensors();
     if (isnan(humidity) || isnan(temperature) || isnan(heat_index)) {
@@ -150,6 +165,11 @@ void handle_http_metrics_client() {
     char response[BUFSIZE];
     snprintf(response, BUFSIZE, response_template, VERSION, BOARD_NAME, DHT_NAME, humidity, temperature, heat_index);
     http_server.send(200, "text/plain; charset=utf-8", response);
+}
+
+void handle_http_not_found() {
+    log_request();
+    http_server.send(404, "text/plain; charset=utf-8", "Not found.");
 }
 
 void read_sensors(boolean force) {
@@ -209,6 +229,27 @@ bool read_sensor(float (*function)(), float *value) {
         log("Failed to read sensor.", LogLevel::DEBUG);
     }
     return success;
+}
+
+void log_request() {
+    char message[128];
+    char method_name[16];
+    get_http_method_name(method_name, 16, http_server.method());
+    snprintf(message, 128, "Request: client=%s:%u method=%s path=%s",
+            http_server.client().remoteIP().toString().c_str(), http_server.client().remotePort(), method_name, http_server.uri().c_str());
+    log(message, LogLevel::INFO);
+}
+
+void get_http_method_name(char *name, size_t name_length, HTTPMethod method) {
+    switch (method) {
+    case HTTP_ANY:
+        snprintf(name, name_length, "ANY");
+        break;
+    default:
+        snprintf(name, name_length, "UNKNOWN");
+        break;
+    //, HTTP_GET, HTTP_HEAD, HTTP_POST, HTTP_PUT, HTTP_PATCH, HTTP_DELETE, HTTP_OPTIONS }
+    }
 }
 
 void log(char const *message, LogLevel level) {
