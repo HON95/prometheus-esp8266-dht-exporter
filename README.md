@@ -8,10 +8,10 @@ An IoT Prometheus exporter for measuring temperature and humidity, using an ESP8
 
 | Metric | Description | Unit |
 | - | - | - |
-| iot_info | Metadata about the device. | |
-| iot_air_humidity_percent | Air humidity. | `%` |
-| iot_air_temperature_celsius | Air temperature. | `°C` |
-| iot_air_heat_index_celsius | Apparent air temperature, based on temperature and humidity. | `°C` |
+| `iot_info` | Metadata about the device. | |
+| `iot_air_humidity_percent` | Air humidity. | `%` |
+| `iot_air_temperature_celsius` | Air temperature. | `°C` |
+| `iot_air_heat_index_celsius` | Apparent air temperature, based on temperature and humidity. | `°C` |
 
 ## Requirements
 
@@ -20,7 +20,7 @@ An IoT Prometheus exporter for measuring temperature and humidity, using an ESP8
 - ESP8266-based board (or some other appropriate Arduino-based board).
     - Tested with "Adafruit Feather HUZZAH ESP8266" and "WEMOS D1 Mini".
 - DHT sensor.
-    - Tested with a cheap DHT11 from eBay and "Wemos DHT Shield".
+    - Tested with a cheap DHT11 from eBay and "Wemos DHT Shield" (using pin 2).
     - DHT11 supports a maximum of 1Hz polling while DHT22 supports a maximum of 2Hz polling.
     - Both DHT11 and DHT22 support both 3V and 5V at 2.5mA max current.
 
