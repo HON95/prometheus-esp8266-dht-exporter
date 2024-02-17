@@ -19,7 +19,9 @@ An IoT Prometheus exporter for measuring temperature and humidity, using an ESP8
 
 - ESP8266-based board (or some other appropriate Arduino-based board).
     - Tested with "Adafruit Feather HUZZAH ESP8266" and "WEMOS D1 Mini".
+    - Tested with ESP8266 Mini from Jaycar ([XC3802](https://www.jaycar.com.au/wi-fi-mini-esp8266-main-board/p/XC3802))
 - DHT sensor.
+    - Tested with Jaycar DHT11 HAT ([XC3856](https://www.jaycar.com.au/duinotech-wi-fi-mini-dht11-temperature-and-humidity-sensor-shield/p/XC3856) w/ [XC3802](https://www.jaycar.com.au/wi-fi-mini-esp8266-main-board/p/XC3802), set `DHT_PIN` to `11`)
     - Tested with a cheap DHT11 from eBay and "Wemos DHT Shield" (using pin 2).
     - DHT11 supports a maximum of 1Hz polling while DHT22 supports a maximum of 2Hz polling.
     - Both DHT11 and DHT22 support both 3V and 5V at 2.5mA max current.
@@ -38,9 +40,12 @@ An IoT Prometheus exporter for measuring temperature and humidity, using an ESP8
 
 ### Hardware
 
-Using the "Adafruit Feather HUZZAH ESP8266".
+- Adafruit Feather HUZZAH ESP8266
+    - Wire the DHT sensor power to the 3.3V and any GND on the ESP and wire the data output to e.g. pin 14 (aka D5).
 
-Wire the DHT sensor power to the 3.3V and any GND on the ESP and wire the data output to e.g. pin 14 (aka D5).
+- Jaycar ESP8266 Mini
+    - Set `DHT_PIN` to `11`
+    - Set board to `LOLIN(WEMOS) D1 R2 & Mini` in Tools -> Board.
 
 ### Software
 
@@ -51,6 +56,7 @@ Using the Arduino IDE.
 1. Set the correct settings for the board.
     - WEMOS D1 Mini uses board "WeMoS D1 R2 & mini".
     - Adafruit Feather HUZZAH ESP8266 uses "Adafruit Feather HUZZAH ESP8266".
+    - Jarcar ESP8266 Mini uses `LOLIN(WEMOS) D1 R2 & Mini`
 1. Build and upload using the Arduino IDE.
 
 ## Version
