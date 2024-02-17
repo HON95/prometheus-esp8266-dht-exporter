@@ -56,7 +56,7 @@ Using the Arduino IDE.
 1. Set the correct settings for the board.
     - WEMOS D1 Mini uses board "WeMoS D1 R2 & mini".
     - Adafruit Feather HUZZAH ESP8266 uses "Adafruit Feather HUZZAH ESP8266".
-    - Jarcar ESP8266 Mini uses `LOLIN(WEMOS) D1 R2 & Mini`
+    - Jarcar ESP8266 Mini uses `WeMoS D1 R2 & Mini`
 1. Build and upload using the Arduino IDE.
 
 ## Version
